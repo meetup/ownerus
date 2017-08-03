@@ -1,0 +1,11 @@
+[package]
+name = "ownerus"
+version = "0.1.0"
+authors = ["softprops <d.tangren@gmail.com>"]
+
+[dependencies]
+glob = "0.2"
+clap = "2.26"
+treeline = "0.1"
+futures = "0.1"
+futures-cpupool = "0.1"
