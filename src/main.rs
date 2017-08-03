@@ -11,7 +11,7 @@ use std::iter::Iterator;
 use std::collections::HashMap;
 
 use clap::{App, Arg};
-use futures::Future;
+use futures::{Future, Stream};
 use futures_cpupool::CpuPool;
 use glob::Pattern;
 
@@ -122,7 +122,7 @@ fn main() {
     );
     match Command::new("git").arg("ls-files").output() {
         Ok(files) => {
-            let pool = CpuPool::new(4);
+            let pool = CpuPool::new(8);
             let paths = BufReader::new(&files.stdout[..])
                 .lines()
                 .filter_map(io::Result::ok)
@@ -137,18 +137,20 @@ fn main() {
                     }
                     true
                 });
-            for path in paths {
-                let (commiter, contributor) = top_commiter(&pool, &path)
+            let stream = futures::stream::futures_unordered(paths.map(|path| {
+                top_commiter(&pool, &path)
                     .join(top_contributor(&pool, path.as_str()))
-                    .wait()
-                    .unwrap();
-                let git_path = GitPath {
-                    path: path,
-                    top_commiter: commiter,
-                    top_contributor: contributor,
-                };
-                println!("{}", git_path);
-            }
+                    .map(|(commiter, contributor)| {
+                        GitPath {
+                            path: path,
+                            top_commiter: commiter,
+                            top_contributor: contributor,
+                        }
+                    })
+            }));
+            stream.for_each(|path| {
+                Ok(println!("{}", path))
+            }).wait().unwrap();
         }
         Err(err) => {
             println!("err {}", err);
