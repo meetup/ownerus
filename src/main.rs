@@ -148,9 +148,10 @@ fn main() {
                         }
                     })
             }));
-            stream.for_each(|path| {
-                Ok(println!("{}", path))
-            }).wait().unwrap();
+            stream
+                .for_each(|path| Ok(println!("{}", path)))
+                .wait()
+                .unwrap();
         }
         Err(err) => {
             println!("err {}", err);
